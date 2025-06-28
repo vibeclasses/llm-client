@@ -171,6 +171,7 @@ jobs:
       - uses: ./.github/actions/setup
         with:
           token: ${{ secrets.NPM_TOKEN }}
+          registry-url: 'https://registry.npmjs.org/'
       - name: Download build artifacts
         uses: actions/download-artifact@v4
         with:
