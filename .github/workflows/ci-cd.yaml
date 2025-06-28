@@ -10,37 +10,36 @@ on:
     branches: [main]
 
 jobs:
-  quality:
-    uses: ./.github/workflows/setup.yaml
-
   lint:
-    needs: [quality]
     runs-on: ubuntu-latest
     steps:
+      - uses: ./.github/actions/setup
       - name: Run ESLint
         run: npm run lint
 
   format:
-    needs: [quality]
     runs-on: ubuntu-latest
     steps:
+      - uses: ./.github/actions/setup
       - name: Check formatting with Prettier
         run: npm run format
 
   type-check:
-    needs: [quality]
     runs-on: ubuntu-latest
     steps:
+      - uses: ./.github/actions/setup
       - name: Run TypeScript type checking
         run: npm run typecheck
 
   test:
-    needs: [quality]
     runs-on: ubuntu-latest
     strategy:
       matrix:
         node-version: [18, 20, 22]
     steps:
+      - uses: ./.github/actions/setup
+        with:
+          node-version: ${{ matrix.node-version }}
       - name: Run tests with coverage
         run: npm run test:coverage
 
@@ -57,6 +56,7 @@ jobs:
     needs: [lint, format, type-check, test]
     runs-on: ubuntu-latest
     steps:
+      - uses: ./.github/actions/setup
       - name: Build package
         run: npm run build
 
@@ -93,6 +93,7 @@ jobs:
     needs: [build]
     runs-on: ubuntu-latest
     steps:
+      - uses: ./.github/actions/setup
       - name: Download package-lock
         uses: actions/download-artifact@v4
         with:
@@ -106,25 +107,15 @@ jobs:
     runs-on: ubuntu-latest
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
         with:
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: 'npm'
 
       - name: Configure Git
         run: |
           git config --local user.email "m@rco.sh"
           git config --local user.name "Marco Antonio Gonzalez Junior"
-
-      - name: Install dependencies
-        run: npm install
 
       - name: Determine version bump type
         id: version-type
@@ -165,6 +156,7 @@ jobs:
     needs: [auto-version]
     runs-on: ubuntu-latest
     steps:
+      - uses: ./.github/actions/setup
       - name: Download build artifacts
         uses: actions/download-artifact@v4
         with:
@@ -183,6 +175,7 @@ jobs:
     needs: [auto-version]
     runs-on: ubuntu-latest
     steps:
+      - uses: ./.github/actions/setup
       - name: Download build artifacts
         uses: actions/download-artifact@v4
         with:
@@ -201,6 +194,7 @@ jobs:
     needs: [publish-npm, publish-gpr]
     runs-on: ubuntu-latest
     steps:
+      - uses: ./.github/actions/setup
       - name: Create GitHub Release
         uses: actions/create-release@v1
         env:
