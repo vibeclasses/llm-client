@@ -62,10 +62,16 @@ export class RetryHandler {
     }
 
     // Full jitter exponential backoff
+
     const exponentialBackoff =
       Math.pow(2, attempt - 1) * this.config.initialDelay
     const cappedBackoff = Math.min(exponentialBackoff, this.config.maxDelay)
     return Math.floor(Math.random() * cappedBackoff)
+      
+// before:
+//     const exponentialBackoff = Math.pow(2, attempt - 1) * this.config.initialDelay;
+//     const cappedBackoff = Math.min(exponentialBackoff, this.config.maxDelay);
+//     return Math.floor(Math.random() * cappedBackoff);
   }
 
   private sleep(ms: number): Promise<void> {
