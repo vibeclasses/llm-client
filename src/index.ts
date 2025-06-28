@@ -1,4 +1,5 @@
 // Core exports
+// Dummy change for minor bump
 export {
   ClaudeClient,
   supportedModels as supportedClaudeModels,
