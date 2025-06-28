@@ -10,7 +10,7 @@ export interface ClaudeMessage {
 }
 
 export interface ClaudeRequest {
-  model: 'claude-sonnet-4-20250514' | 'claude-opus-4-20250514'
+  model: 'claude-sonnet-4-20250514' | 'claude-opus-4-20250514' | string
   max_tokens: number
   messages: ClaudeMessage[]
   system?: string

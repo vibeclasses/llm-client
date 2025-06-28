@@ -8,6 +8,8 @@ import type {
 } from '@/types/index.ts'
 import { TokenManager, type TokenUsage } from './token-manager.ts'
 import type { AIClient } from '@/types/ai-client.js'
+import type { ChatCompletionMessageParam } from 'openai/resources/chat/completions/completions.js'
+import type { TokenCountRequest, TokenCountResponse } from '@/types/api-types.js'
 
 export class OpenAIClient extends EventEmitter implements AIClient {
   private readonly config: Required<OpenAIClientConfig>
@@ -45,9 +47,23 @@ export class OpenAIClient extends EventEmitter implements AIClient {
     this.tokenManager = new TokenManager()
   }
 
+  // Helper to map ClaudeMessage to OpenAI ChatCompletionMessageParam
+  private mapClaudeMessagesToOpenAI(messages: ClaudeRequest['messages']): ChatCompletionMessageParam[] {
+    // Only map 'user' and 'assistant' roles, ignore others
+    return messages.map((msg) => {
+      if (msg.role === 'user' || msg.role === 'assistant') {
+        return {
+          role: msg.role,
+          content: typeof msg.content === 'string' ? msg.content : (Array.isArray(msg.content) ? msg.content.map(c => c.text).join('\n') : ''),
+        } as ChatCompletionMessageParam
+      }
+      return undefined
+    }).filter(Boolean) as ChatCompletionMessageParam[]
+  }
+
   async sendMessage(
     messages: ClaudeRequest['messages'],
-    options: Partial<ClaudeRequest> = {},
+    _options: Partial<ClaudeRequest> = {},
   ): Promise<ClaudeResponse> {
     if (this.tokenManager.isSessionLimitReached()) {
       throw new Error(
@@ -59,11 +75,30 @@ export class OpenAIClient extends EventEmitter implements AIClient {
 
     const response = await this.openai.chat.completions.create({
       model: this.config.model,
-      messages: messages.map(msg => ({ role: msg.role, content: msg.content as string })),
+      messages: this.mapClaudeMessagesToOpenAI(messages),
       max_tokens: this.config.maxTokens,
       temperature: this.config.temperature,
-      ...options,
+      // Only include OpenAI-compatible options
     })
+
+    // Map OpenAI finish_reason to ClaudeResponse stop_reason
+    let stop_reason: ClaudeResponse['stop_reason'] = 'end_turn'
+    switch (response.choices[0].finish_reason) {
+      case 'length':
+        stop_reason = 'max_tokens'
+        break
+      case 'stop':
+        stop_reason = 'end_turn'
+        break
+      case 'tool_calls':
+        stop_reason = 'tool_use'
+        break
+      case 'content_filter':
+        stop_reason = 'stop_sequence'
+        break
+      default:
+        stop_reason = 'end_turn'
+    }
 
     const claudeResponse: ClaudeResponse = {
       id: response.id,
@@ -76,8 +111,7 @@ export class OpenAIClient extends EventEmitter implements AIClient {
         },
       ],
       model: response.model,
-      stop_reason: response.choices[0].finish_reason,
-      stop_sequence: null,
+      stop_reason,
       usage: {
         input_tokens: response.usage?.prompt_tokens ?? 0,
         output_tokens: response.usage?.completion_tokens ?? 0,
@@ -99,9 +133,7 @@ export class OpenAIClient extends EventEmitter implements AIClient {
 
   async streamMessage(
     messages: ClaudeRequest['messages'],
-    options: Partial<
-      ClaudeRequest & { onContent?: (delta: string) => void }
-    > = {},
+    options: Partial<ClaudeRequest & { onContent?: (delta: string) => void }> = {},
   ): Promise<AsyncIterable<string>> {
     if (this.tokenManager.isSessionLimitReached()) {
       throw new Error(
@@ -111,21 +143,20 @@ export class OpenAIClient extends EventEmitter implements AIClient {
       )
     }
 
+    // Only pass OpenAI-compatible fields
     const stream = await this.openai.chat.completions.create({
       model: this.config.model,
-      messages: messages.map(msg => ({ role: msg.role, content: msg.content as string })),
+      messages: this.mapClaudeMessagesToOpenAI(messages),
       max_tokens: this.config.maxTokens,
       temperature: this.config.temperature,
       stream: true,
-      ...options,
-    })
+    } as unknown as import('openai/resources/chat/completions/completions.js').ChatCompletionCreateParamsStreaming)
 
-    // eslint-disable-next-line @typescript-eslint/no-this-alias
-    const self = this
+    // OpenAI streaming returns an AsyncIterable if stream: true
     return (
       async function* () {
-        for await (const chunk of stream) {
-          const delta = chunk.choices[0]?.delta?.content || ''
+        for await (const chunk of stream as AsyncIterable<import('openai/resources/chat/completions/completions.js').ChatCompletionChunk>) {
+          const delta = chunk.choices[0]?.delta?.content ?? ''
           if (options.onContent) {
             options.onContent(delta)
           }
@@ -135,7 +166,7 @@ export class OpenAIClient extends EventEmitter implements AIClient {
     )()
   }
 
-  async countTokens(): Promise<any> {
+  async countTokens(_request: TokenCountRequest): Promise<TokenCountResponse> {
     throw new Error('countTokens is not implemented for OpenAIClient')
   }
 
