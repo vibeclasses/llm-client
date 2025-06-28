@@ -120,7 +120,7 @@ jobs:
       - name: Test package exports
         run: |
           echo "Testing package imports..."
-          node -e "import('./dist/index.js').then(pkg => console.log('ESM import works:', Object.keys(pkg).length > 0))"
+          node -e "import('./dist/index.mjs').then(pkg => console.log('ESM import works:', Object.keys(pkg).length > 0))"
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
