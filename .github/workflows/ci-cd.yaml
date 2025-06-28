@@ -11,7 +11,7 @@ on:
 
 jobs:
   quality:
-    uses: ./.github/workflows/reusable/setup.yaml
+    uses: ./.github/workflows/setup.yaml
 
   lint:
     needs: [quality]
