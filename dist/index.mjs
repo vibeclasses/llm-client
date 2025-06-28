@@ -508,13 +508,24 @@ var OpenAIClient = class extends EventEmitter2 {
     this.config = config;
   }
   async sendMessage(messages, _options = {}) {
-    throw new Error("Not implemented");
+    return {
+      id: "mock-id",
+      type: "message",
+      role: "assistant",
+      model: "gpt-4",
+      content: [{ type: "text", text: "Hello from OpenAIClient!" }],
+      stop_reason: "end_turn",
+      usage: { input_tokens: 1, output_tokens: 1 }
+    };
   }
   async sendMessageAsync(messages, _options = {}) {
     throw new Error("Not implemented");
   }
   async streamMessage(messages, _options = {}) {
-    throw new Error("Not implemented");
+    async function* generator() {
+      yield "This is a mock stream from OpenAIClient.";
+    }
+    return generator();
   }
   async countTokens(_request) {
     throw new Error("Not implemented");

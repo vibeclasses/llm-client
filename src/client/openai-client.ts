@@ -1,72 +1,158 @@
 import 'dotenv/config'
+import OpenAI from 'openai'
 import { EventEmitter } from 'eventemitter3'
 import type {
+  OpenAIClientConfig,
   ClaudeRequest,
   ClaudeResponse,
-  TokenCountRequest,
-  TokenCountResponse,
-} from '@/types/api-types.js'
+} from '@/types/index.ts'
+import { TokenManager, type TokenUsage } from './token-manager.ts'
 import type { AIClient } from '@/types/ai-client.js'
 
 export class OpenAIClient extends EventEmitter implements AIClient {
-  constructor(private config: Record<string, unknown>) {
+  private readonly config: Required<OpenAIClientConfig>
+  private readonly openai: OpenAI
+  private readonly tokenManager: TokenManager
+
+  constructor(config: OpenAIClientConfig) {
     super()
-    // TODO: Load config from env (OPENAI_API_KEY, etc.)
+
+    const envMaxTokens = process.env.MAX_TOKENS
+      ? parseInt(process.env.MAX_TOKENS, 10)
+      : undefined
+
+    this.config = {
+      baseUrl: 'https://api.openai.com/v1',
+      timeout: 30000,
+      maxRetries: 3,
+      retryDelay: 1000,
+      maxTokens: envMaxTokens ?? 16384,
+      model: 'gpt-4o',
+      temperature: 1.0,
+      enableLogging: false,
+      organizationId: '',
+      ...config,
+    }
+
+    this.openai = new OpenAI({
+      apiKey: this.config.apiKey,
+      baseURL: this.config.baseUrl,
+      timeout: this.config.timeout,
+      maxRetries: this.config.maxRetries,
+      organization: this.config.organizationId,
+    })
+
+    this.tokenManager = new TokenManager()
   }
 
   async sendMessage(
     messages: ClaudeRequest['messages'],
-    _options: Partial<ClaudeRequest> = {},
+    options: Partial<ClaudeRequest> = {},
   ): Promise<ClaudeResponse> {
-    // Minimal mock implementation for testing
-    return {
-      id: 'mock-id',
+    if (this.tokenManager.isSessionLimitReached()) {
+      throw new Error(
+        `Session token limit of ${this.tokenManager.getMaxSessionTokens()} has been reached. ` +
+          `Current usage: ${this.tokenManager.getTotalSessionTokens()} tokens. ` +
+          `Reset token usage with resetTokenUsage() to continue.`,
+      )
+    }
+
+    const response = await this.openai.chat.completions.create({
+      model: this.config.model,
+      messages: messages.map(msg => ({ role: msg.role, content: msg.content as string })),
+      max_tokens: this.config.maxTokens,
+      temperature: this.config.temperature,
+      ...options,
+    })
+
+    const claudeResponse: ClaudeResponse = {
+      id: response.id,
       type: 'message',
       role: 'assistant',
-      model: 'gpt-4',
-      content: [{ type: 'text', text: 'Hello from OpenAIClient!' }],
-      stop_reason: 'end_turn',
-      usage: { input_tokens: 1, output_tokens: 1 },
+      content: [
+        {
+          type: 'text',
+          text: response.choices[0].message.content ?? '',
+        },
+      ],
+      model: response.model,
+      stop_reason: response.choices[0].finish_reason,
+      stop_sequence: null,
+      usage: {
+        input_tokens: response.usage?.prompt_tokens ?? 0,
+        output_tokens: response.usage?.completion_tokens ?? 0,
+      },
     }
+
+    this.tokenManager.trackUsage(claudeResponse.usage)
+    this.emit('response', claudeResponse)
+
+    return claudeResponse
   }
 
   async sendMessageAsync(
     messages: ClaudeRequest['messages'],
-    _options: Partial<ClaudeRequest> = {},
+    options: Partial<ClaudeRequest> = {},
   ): Promise<ClaudeResponse> {
-    // TODO: Implement async version
-    throw new Error('Not implemented')
+    return this.sendMessage(messages, options)
   }
 
   async streamMessage(
     messages: ClaudeRequest['messages'],
-    _options: Partial<
+    options: Partial<
       ClaudeRequest & { onContent?: (delta: string) => void }
     > = {},
   ): Promise<AsyncIterable<string>> {
-    // Minimal mock streaming implementation for testing
-    async function* generator(): AsyncGenerator<string> {
-      yield 'This is a mock stream from OpenAIClient.'
+    if (this.tokenManager.isSessionLimitReached()) {
+      throw new Error(
+        `Session token limit of ${this.tokenManager.getMaxSessionTokens()} has been reached. ` +
+          `Current usage: ${this.tokenManager.getTotalSessionTokens()} tokens. ` +
+          `Reset token usage with resetTokenUsage() to continue.`,
+      )
     }
-    return generator()
+
+    const stream = await this.openai.chat.completions.create({
+      model: this.config.model,
+      messages: messages.map(msg => ({ role: msg.role, content: msg.content as string })),
+      max_tokens: this.config.maxTokens,
+      temperature: this.config.temperature,
+      stream: true,
+      ...options,
+    })
+
+    // eslint-disable-next-line @typescript-eslint/no-this-alias
+    const self = this
+    return (
+      async function* () {
+        for await (const chunk of stream) {
+          const delta = chunk.choices[0]?.delta?.content || ''
+          if (options.onContent) {
+            options.onContent(delta)
+          }
+          yield delta
+        }
+      }
+    )()
   }
 
-  async countTokens(_request: TokenCountRequest): Promise<TokenCountResponse> {
-    // TODO: Implement token counting for OpenAI
-    throw new Error('Not implemented')
+  async countTokens(): Promise<any> {
+    throw new Error('countTokens is not implemented for OpenAIClient')
   }
 
-  getTokenUsage(): unknown {
-    // TODO: Implement token usage tracking
-    return {}
+  getTokenUsage(): TokenUsage {
+    return this.tokenManager.getUsage()
   }
 
-  getTokenUsageInfo(): unknown {
-    // TODO: Implement token usage info
-    return {}
+  getTokenUsageInfo(): {
+    used: number
+    remaining: number
+    max: number
+    percentage: number
+  } {
+    return this.tokenManager.getTokenUsageInfo()
   }
 
   resetTokenUsage(): void {
-    // TODO: Implement reset
+    this.tokenManager.reset()
   }
 }

@@ -22,6 +22,28 @@ export interface ClaudeClientConfig {
   organizationId?: string
 }
 
+export interface OpenAIClientConfig {
+  apiKey: string
+  baseUrl?: string
+  timeout?: number
+  maxRetries?: number
+  retryDelay?: number
+  maxTokens?: number
+  model?:
+    | 'claude-sonnet-4-20250514'
+    | 'claude-opus-4-20250514'
+    | 'gpt-3.5-turbo'
+    | 'gpt-3.5-turbo-16k'
+    | 'gpt-4'
+    | 'gpt-4-turbo'
+    | 'gpt-4o'
+    | 'gpt-4-32k'
+    | string // allow future models
+  temperature?: number
+  enableLogging?: boolean
+  organizationId?: string
+}
+
 export interface RetryConfig {
   maxAttempts: number
   initialDelay: number
