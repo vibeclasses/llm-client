@@ -1,0 +1,105 @@
+openapi: 3.0.3
+info:
+  title: @vibeclasses/llm-client API
+  version: 1.0.0
+  description: |
+    Unified API for Anthropic Claude and OpenAI GPT models. Provider is selected via the AI_PROVIDER environment variable or per-request override.
+servers:
+  - url: http://localhost:3000
+paths:
+  /chat:
+    post:
+      summary: Send a chat message to the selected AI provider
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              oneOf:
+                - $ref: '#/components/schemas/ClaudeRequest'
+                - $ref: '#/components/schemas/OpenAIRequest'
+      parameters:
+        - in: header
+          name: X-Provider-Override
+          schema:
+            type: string
+            enum: [claude, openai]
+          required: false
+          description: Override the provider for this request
+      responses:
+        '200':
+          description: AI response
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/ClaudeResponse'
+                  - $ref: '#/components/schemas/OpenAIResponse'
+components:
+  schemas:
+    ClaudeRequest:
+      type: object
+      properties:
+        model:
+          type: string
+        messages:
+          type: array
+          items:
+            $ref: '#/components/schemas/Message'
+        max_tokens:
+          type: integer
+        temperature:
+          type: number
+        stream:
+          type: boolean
+    OpenAIRequest:
+      type: object
+      properties:
+        model:
+          type: string
+        messages:
+          type: array
+          items:
+            $ref: '#/components/schemas/Message'
+        max_tokens:
+          type: integer
+        temperature:
+          type: number
+        stream:
+          type: boolean
+    Message:
+      type: object
+      properties:
+        role:
+          type: string
+          enum: [user, assistant, system]
+        content:
+          type: string
+    ClaudeResponse:
+      type: object
+      properties:
+        id:
+          type: string
+        content:
+          type: array
+          items:
+            type: object
+            properties:
+              type:
+                type: string
+              text:
+                type: string
+    OpenAIResponse:
+      type: object
+      properties:
+        id:
+          type: string
+        choices:
+          type: array
+          items:
+            type: object
+            properties:
+              message:
+                $ref: '#/components/schemas/Message'
+              finish_reason:
+                type: string

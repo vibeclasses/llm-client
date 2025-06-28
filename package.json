@@ -1,0 +1,103 @@
+{
+  "name": "@vibeclasses/llm-client",
+  "version": "1.1.3",
+  "description": "Production-ready TypeScript client for Anthropic Claude API with comprehensive features",
+  "type": "module",
+  "public": true,
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.mjs"
+      },
+      "require": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.cjs"
+      }
+    },
+    "./express": {
+      "import": "./dist/integrations/express/index.js",
+      "require": "./dist/integrations/express/index.js"
+    },
+    "./fastify": {
+      "import": "./dist/integrations/fastify/index.js",
+      "require": "./dist/integrations/fastify/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "openapi.yaml"
+  ],
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "type-check": "tsc --noEmit",
+    "test": "vitest",
+    "test:ci": "vitest run --coverage",
+    "lint": "eslint src",
+    "lint:fix": "eslint src --fix",
+    "format": "prettier --write src",
+    "docs:api": "typedoc --out docs/api src/index.ts",
+    "docs:openapi": "redoc-cli build openapi.yaml --output docs/api-reference.html",
+    "validate": "swagger-codegen validate openapi.yaml",
+    "prepublishOnly": "npm run lint:fix && npm run format && npm run test:ci && npm run build"
+  },
+  "keywords": [
+    "anthropic",
+    "claude-client",
+    "claude",
+    "ai",
+    "api",
+    "client",
+    "typescript",
+    "streaming",
+    "retry",
+    "express",
+    "fastify"
+  ],
+  "author": "Marco Antonio Gonzalez Junior <m@rco.sh>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/vibeclasses/llm-client.git"
+  },
+  "dependencies": {
+    "dotenv": "^16.5.0",
+    "eventemitter3": "^5.0.0"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.2",
+    "@types/node": "20.0.0",
+    "@typescript-eslint/eslint-plugin": "^8.0.0",
+    "@typescript-eslint/parser": "^8.0.0",
+    "@vitest/coverage-v8": "^2.0.0",
+    "eslint": "^9.0.0",
+    "eslint-config-prettier": "^9.0.0",
+    "fastify-plugin": "^5.0.1",
+    "prettier": "^3.0.0",
+    "redoc-cli": "^0.13.0",
+    "swagger-codegen": "^0.1.1",
+    "tsup": "^8.0.0",
+    "typedoc": "^0.25.0",
+    "typescript": "^5.4.4",
+    "vitest": "^2.0.0"
+  },
+  "peerDependencies": {
+    "express": "^4.18.0 || ^5.0.0",
+    "fastify": "^4.0.0 || ^5.0.0"
+  },
+  "peerDependenciesMeta": {
+    "express": {
+      "optional": true
+    },
+    "fastify": {
+      "optional": true
+    }
+  }
+}
