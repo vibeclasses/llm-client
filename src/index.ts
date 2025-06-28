@@ -1,9 +1,16 @@
 // Core exports
-export { ClaudeClient } from './client/claude-client.js'
+export {
+  ClaudeClient,
+  supportedModels as supportedClaudeModels,
+} from './client/claude-client.js'
 export { StreamingClient } from './client/streaming-client.js'
 export { TokenManager } from './client/token-manager.js'
-export { createAIClient } from './client/ai-client-factory.js'
-export { OpenAIClient } from './client/openai-client.js'
+export {
+  createAIClient,
+  supportedProviders,
+  supportedModels,
+} from './client/ai-client-factory.js'
+export { OpenAIClient, supportedModels as supportedOpenAIModels } from './client/openai-client.js'
 
 // Type exports
 export * from './types/api-types.js'

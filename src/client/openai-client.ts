@@ -14,10 +14,21 @@ import type {
   TokenCountResponse,
 } from '@/types/api-types.js'
 
+export const supportedModels = [
+  'gpt-4o',
+  'gpt-4o-mini',
+  'gpt-4-turbo',
+  'gpt-4-vision-preview',
+  'gpt-3.5-turbo',
+] as const
+
+export type SupportedOpenAIModel = (typeof supportedModels)[number]
+
 export class OpenAIClient extends EventEmitter implements AIClient {
   private readonly config: Required<OpenAIClientConfig>
   private readonly openai: OpenAI
   private readonly tokenManager: TokenManager
+  public readonly supportedModels = supportedModels
 
   constructor(config: OpenAIClientConfig) {
     super()

@@ -13,12 +13,22 @@ import { ErrorClassifier } from '@/utils/error-classifier.ts'
 import { TokenManager, type TokenUsage } from './token-manager.ts'
 import { StreamingClient } from './streaming-client.ts'
 
+export const supportedModels = [
+  'claude-3-opus-20240229',
+  'claude-3-sonnet-20240229',
+  'claude-3-haiku-20240307',
+  'claude-sonnet-4-20250514',
+] as const
+
+export type SupportedClaudeModel = (typeof supportedModels)[number]
+
 export class ClaudeClient extends EventEmitter {
   private readonly config: Required<ClaudeClientConfig>
   private readonly retryHandler: RetryHandler
   private readonly errorClassifier: ErrorClassifier
   private readonly tokenManager: TokenManager
   private readonly streamingClient: StreamingClient
+  public readonly supportedModels = supportedModels
 
   constructor(config: ClaudeClientConfig) {
     super()
