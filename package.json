@@ -1,6 +1,6 @@
 {
   "name": "@vibeclasses/llm-client",
-  "version": "1.6.5",
+  "version": "1.6.6",
   "description": "Production-ready TypeScript client for Anthropic Claude API and OpenAI API with comprehensive features",
   "type": "module",
   "public": true,
