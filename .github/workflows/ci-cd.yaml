@@ -248,7 +248,7 @@ jobs:
       - name: Configure Git
         run: |
           git config --local user.email "m@rco.sh"
-          git config --local user.name "Marco Antonio Gonzzalez Junior"
+          git config --local user.name "Marco Antonio Gonzalez Junior"
 
       - name: Install dependencies
         run: npm install
