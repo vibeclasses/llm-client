@@ -178,7 +178,7 @@ jobs:
         run: npm pkg fix
 
       - name: Publish to GitHub Packages
-        run: npm publish
+        run: npm publish --registry=https://npm.pkg.github.com/
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GH_PAT_TOKEN }}
 
