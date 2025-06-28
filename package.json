@@ -46,7 +46,7 @@
     "docs:api": "typedoc --out docs/api src/index.ts",
     "docs:openapi": "redoc-cli build openapi.yaml --output docs/api-reference.html",
     "validate": "swagger-codegen validate openapi.yaml",
-    "prepublishOnly": "npm run lint:fix && npm run format && npm run test:ci && npm run build"
+    "prepublishOnly": "npm run lint:fix && npm run format && npm run test:coverage && npm run build"
   },
   "keywords": [
     "anthropic",
