@@ -37,7 +37,6 @@ export class ClaudeClient extends EventEmitter {
     const envMaxTokens = process.env.MAX_TOKENS
       ? parseInt(process.env.MAX_TOKENS, 10)
       : undefined
-    console.log({ 'Using llm-client max tokens': { envMaxTokens } })
 
     this.config = {
       baseUrl: 'https://api.anthropic.com/v1',
