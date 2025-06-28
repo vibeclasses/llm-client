@@ -1,4 +1,3 @@
-// @ts-ignore - Ignoring missing type declarations for fastify
 import type {
   FastifyPluginAsync,
   FastifyPluginOptions,
@@ -6,11 +5,9 @@ import type {
   FastifyRequest,
   FastifyReply,
 } from 'fastify'
-// @ts-ignore - Ignoring missing type declarations for fastify-plugin
 import fp from 'fastify-plugin'
 import type { ClaudeClient } from '@/client/claude-client.js'
 
-// @ts-ignore - Suppress error if fastify types are not installed
 declare module 'fastify' {
   interface FastifyInstance {
     claude: ClaudeClient
