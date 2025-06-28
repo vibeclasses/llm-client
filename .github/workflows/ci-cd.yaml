@@ -13,6 +13,7 @@ jobs:
   lint:
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
       - uses: ./.github/actions/setup
       - name: Run ESLint
         run: npm run lint
@@ -20,6 +21,7 @@ jobs:
   format:
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
       - uses: ./.github/actions/setup
       - name: Check formatting with Prettier
         run: npm run format
@@ -27,6 +29,7 @@ jobs:
   type-check:
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
       - uses: ./.github/actions/setup
       - name: Run TypeScript type checking
         run: npm run typecheck
@@ -37,6 +40,7 @@ jobs:
       matrix:
         node-version: [18, 20, 22]
     steps:
+      - uses: actions/checkout@v4
       - uses: ./.github/actions/setup
         with:
           node-version: ${{ matrix.node-version }}
@@ -56,6 +60,7 @@ jobs:
     needs: [lint, format, type-check, test]
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
       - uses: ./.github/actions/setup
       - name: Build package
         run: npm run build
@@ -93,6 +98,7 @@ jobs:
     needs: [build]
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
       - uses: ./.github/actions/setup
       - name: Download package-lock
         uses: actions/download-artifact@v4
@@ -107,10 +113,14 @@ jobs:
     runs-on: ubuntu-latest
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     steps:
-      - uses: ./.github/actions/setup
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
+      - uses: ./.github/actions/setup
+        with:
+          node-version: '20'
+          cache: 'npm'
 
       - name: Configure Git
         run: |
@@ -156,6 +166,7 @@ jobs:
     needs: [auto-version]
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
       - uses: ./.github/actions/setup
       - name: Download build artifacts
         uses: actions/download-artifact@v4
@@ -175,6 +186,7 @@ jobs:
     needs: [auto-version]
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
       - uses: ./.github/actions/setup
       - name: Download build artifacts
         uses: actions/download-artifact@v4
@@ -194,6 +206,7 @@ jobs:
     needs: [publish-npm, publish-gpr]
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
       - uses: ./.github/actions/setup
       - name: Create GitHub Release
         uses: actions/create-release@v1
