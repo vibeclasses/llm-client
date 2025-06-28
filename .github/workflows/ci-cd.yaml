@@ -168,6 +168,7 @@ jobs:
       - uses: ./.github/actions/setup
         with:
           token: ${{ secrets.GH_PAT_TOKEN }}
+          scope: '@vibeclasses'
       - name: Download build artifacts
         uses: actions/download-artifact@v4
         with:
