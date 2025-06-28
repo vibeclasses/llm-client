@@ -75,12 +75,25 @@ describe('RetryHandler', () => {
         .mockRejectedValueOnce(networkError)
         .mockResolvedValueOnce('success')
 
+      // Mock Math.random to return a predictable value for testing jitter
+      const randomSpy = vi.spyOn(Math, 'random').mockReturnValue(0.5)
+
       const startTime = Date.now()
       await retryHandler.execute(mockOperation)
       const endTime = Date.now()
       
-      expect(endTime - startTime).toBeGreaterThan(50)
+      // Calculate expected delays with mocked Math.random = 0.5
+      // First retry: Math.floor(0.5 * 100) = 50ms
+      // Second retry: Math.floor(0.5 * 200) = 100ms
+      // Total expected delay: 50 + 100 = 150ms (approximately, as Date.now() is not precise)
+
+      // We expect the total time to be around 150ms, but allow for some variance.
+      expect(endTime - startTime).toBeGreaterThanOrEqual(140) // Allowing for slight variations
+      expect(endTime - startTime).toBeLessThan(200) // Should not be excessively long
+
       expect(mockOperation).toHaveBeenCalledTimes(3)
+
+      randomSpy.mockRestore() // Restore original Math.random
     })
 
     it('should respect retry-after header for rate limit errors', async () => {
