@@ -20,6 +20,7 @@ export const supportedModels = [
   'gpt-4-turbo',
   'gpt-4-vision-preview',
   'gpt-3.5-turbo',
+  'gpt-4.1',
 ] as const
 
 export type SupportedOpenAIModel = (typeof supportedModels)[number]

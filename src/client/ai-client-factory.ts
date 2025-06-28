@@ -26,8 +26,12 @@ export function createAIClient(
     providerOverride?: SupportedProvider
   },
 ): AIClient {
+  const envProvider = process.env.AI_PROVIDER
+  const isValidProvider = supportedProviders.includes(envProvider as SupportedProvider)
   const provider =
-    config?.providerOverride ?? process.env.AI_PROVIDER ?? 'claude'
+    config?.providerOverride ??
+    (isValidProvider ? (envProvider as SupportedProvider) : undefined) ??
+    'claude'
 
   if (provider === 'openai') {
     return new OpenAIClient(config as OpenAIClientConfig)
