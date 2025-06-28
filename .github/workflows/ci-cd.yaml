@@ -1,4 +1,4 @@
-name: CI/CD Pipeline
+name: CI/CD
 
 permissions:
   contents: write
@@ -8,73 +8,43 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
-  release:
-    types: [published]
-
-env:
-  NODE_VERSION: "20"
+  workflow_dispatch:
 
 jobs:
-  lint-and-format:
-    name: Code Quality
+  lint:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: "npm"
-
-      - name: Install dependencies
-        run: npm install
-
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
       - name: Run ESLint
         run: npm run lint
 
+  format:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
       - name: Check formatting with Prettier
         run: npm run format
 
   type-check:
-    name: Type Check
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: "npm"
-
-      - name: Install dependencies
-        run: npm install
-
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
       - name: Run TypeScript type checking
         run: npm run typecheck
 
   test:
-    name: Test
     runs-on: ubuntu-latest
     strategy:
       matrix:
         node-version: [18, 20, 22]
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js ${{ matrix.node-version }}
-        uses: actions/setup-node@v4
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
         with:
           node-version: ${{ matrix.node-version }}
-          cache: "npm"
-
-      - name: Install dependencies
-        run: npm install
-
       - name: Run tests with coverage
         run: npm run test:coverage
 
@@ -88,22 +58,11 @@ jobs:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
 
   build:
-    name: Build
+    needs: [lint, format, type-check, test]
     runs-on: ubuntu-latest
-    needs: [lint-and-format, type-check, test]
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: "npm"
-
-      - name: Install dependencies
-        run: npm install
-
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
       - name: Build package
         run: npm run build
 
@@ -129,74 +88,57 @@ jobs:
           path: dist/
           retention-days: 7
 
+      - name: Upload package-lock
+        uses: actions/upload-artifact@v4
+        with:
+          name: package-lock
+          path: package-lock.json
+          retention-days: 7
+
   security-audit:
-    if: false 
-      # Temporarily disabled due to issues with npm audit in CI environments
-    name: Security Audit
+    needs: [build]
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
+      - name: Download package-lock
+        uses: actions/download-artifact@v4
         with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: "npm"
-
-      - name: Install dependencies
-        run: npm install
+          name: package-lock
 
       - name: Run security audit
-        run: npm audit --audit-level=moderate
-
-      - name: Check for vulnerabilities
-        run: npm audit --audit-level=high --production
+        run: npm audit --production --audit-level=moderate
 
   auto-version:
-    name: Auto Version Bump
+    needs: [build, security-audit]
     runs-on: ubuntu-latest
-    needs: [lint-and-format, type-check, test, build]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - uses: ./.github/actions/setup
         with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: "npm"
+          node-version: '20'
+          cache: 'npm'
 
       - name: Configure Git
         run: |
           git config --local user.email "m@rco.sh"
           git config --local user.name "Marco Antonio Gonzalez Junior"
 
-      - name: Install dependencies
-        run: npm install
-
       - name: Determine version bump type
         id: version-type
         run: |
-          # Get the latest commit message
           COMMIT_MSG=$(git log -1 --pretty=%B)
           echo "Commit message: $COMMIT_MSG"
-
-          # Convert to lowercase for case-insensitive matching
           COMMIT_MSG_LOWER=$(echo "$COMMIT_MSG" | tr '[:upper:]' '[:lower:]')
-
-          # Skip if commit message contains [skip version]
           if echo "$COMMIT_MSG_LOWER" | grep -E "\[skip version\]" > /dev/null; then
             echo "Skipping version bump due to [skip version] in commit message"
             echo "skip=true" >> $GITHUB_OUTPUT
             exit 0
           fi
-
-          # Determine version bump type based on commit message
           if echo "$COMMIT_MSG_LOWER" | grep -E "(bug|fix)" > /dev/null; then
             VERSION_TYPE="patch"
           elif echo "$COMMIT_MSG_LOWER" | grep -E "release" > /dev/null; then
@@ -204,7 +146,6 @@ jobs:
           else
             VERSION_TYPE="minor"
           fi
-
           echo "Version bump type: $VERSION_TYPE"
           echo "version-type=$VERSION_TYPE" >> $GITHUB_OUTPUT
           echo "skip=false" >> $GITHUB_OUTPUT
@@ -215,150 +156,67 @@ jobs:
         run: |
           echo "Bumping version with type: ${{ steps.version-type.outputs.version-type }}"
           npm version ${{ steps.version-type.outputs.version-type }} --no-git-tag-version
-
-          # Get the new version
           NEW_VERSION=$(node -p "require('./package.json').version")
           echo "New version: $NEW_VERSION"
-
-          # Commit the version bump
           git add package.json package-lock.json
           git commit -m "chore: bump version to $NEW_VERSION [skip ci]"
-
-          # Create and push the tag
           git tag "v$NEW_VERSION"
           git push origin main --follow-tags || echo "Push failed, check branch protection rules"
 
-  publish:
-    name: Publish to NPM
-    runs-on: ubuntu-latest
+  publish-npm:
     needs: [auto-version]
-    # if: github.event_name == 'release' && github.event.action == 'published'
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          # Fetch full history to get commit messages
-          fetch-depth: 0
-          # Use a token that can push back to the repo
-          token: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          registry-url: "https://registry.npmjs.org"
-          cache: "npm"
-
-      - name: Configure Git
-        run: |
-          git config --local user.email "m@rco.sh"
-          git config --local user.name "Marco Antonio Gonzalez Junior"
-
-      - name: Install dependencies
-        run: npm install
-
-      - name: Build package
-        run: npm run build
-
-      - name: Fix package
-        run: npm pkg fix
-
-      - name: Publish to NPM
-        run: npm publish
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-
-      - name: Update release with new version info
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const newVersion = require('./package.json').version;
-            
-            // Check if this is a release event
-            if (context.payload.release && context.payload.release.id) {
-              // Update existing release
-              await github.rest.repos.updateRelease({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                release_id: context.payload.release.id,
-                name: `v${newVersion}`,
-                tag_name: `v${newVersion}`
-              });
-            } else {
-              // Create a new release if not triggered by a release event
-              console.log('No release found in context. Creating a new release tag.');
-              
-              // Get the current commit SHA
-              const { data: refData } = await github.rest.git.getRef({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                ref: `heads/${context.ref.split('/').pop()}`
-              });
-              
-              // Create a new release
-              await github.rest.repos.createRelease({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                tag_name: `v${newVersion}`,
-                name: `v${newVersion}`,
-                target_commitish: refData.object.sha,
-                generate_release_notes: true
-              });
-            }
-
-  dependency-review:
-    # if: github.event_name == 'pull_request'
-    if: false 
-      # Temporarily disabled due to issues with dependency-review-action in CI environments
-    name: Dependency Review
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Dependency Review
-        uses: actions/dependency-review-action@v4
-        with:
-          fail-on-severity: moderate
-          allow-licenses: MIT, Apache-2.0, BSD-2-Clause, BSD-3-Clause, ISC
-
-  validate-package:
-    name: Validate Package
-    runs-on: ubuntu-latest
-    needs: [build]
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: "npm"
-
-      - name: Install dependencies
-        run: npm install
-
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
       - name: Download build artifacts
         uses: actions/download-artifact@v4
         with:
           name: build-artifacts
           path: dist/
 
-      - name: Pack and validate package
-        run: |
-          npm pack --dry-run
-          echo "Package validation completed ✓"
+      - name: Fix package
+        run: npm pkg fix
 
-      - name: Check package size
-        run: |
-          PACKED_SIZE=$(npm pack --dry-run 2>&1 | grep -o '[0-9.]*[kMG]B' | tail -1)
-          echo "Package size: $PACKED_SIZE"
+      - name: Publish to NPM
+        run: npm publish --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
-          # Convert to bytes for comparison (rough estimation)
-          if [[ $PACKED_SIZE == *"MB"* ]]; then
-            SIZE_NUM=$(echo $PACKED_SIZE | grep -o '[0-9.]*')
-            if (( $(echo "$SIZE_NUM > 1" | bc -l) )); then
-              echo "Warning: Package size is larger than 1MB"
-            fi
-          fi
+  publish-gpr:
+    needs: [auto-version]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: build-artifacts
+          path: dist/
+
+      - name: Fix package
+        run: npm pkg fix
+
+      - name: Publish to GitHub Packages
+        run: npm publish
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  create-release:
+    needs: [publish-npm, publish-gpr]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
+      - name: Create GitHub Release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: v$(node -p "require('./package.json').version")
+          release_name: v$(node -p "require('./package.json').version")
+          body: |
+            Please refer to the commit history for changes.
+          draft: false
+          prerelease: false
