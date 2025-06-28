@@ -1,14 +1,20 @@
 // @ts-ignore - Ignoring missing type declarations for fastify
-import type { FastifyPluginAsync, FastifyPluginOptions } from 'fastify'
+import type {
+  FastifyPluginAsync,
+  FastifyPluginOptions,
+  FastifyInstance,
+  FastifyRequest,
+  FastifyReply,
+} from 'fastify'
 // @ts-ignore - Ignoring missing type declarations for fastify-plugin
 import fp from 'fastify-plugin'
 import type { ClaudeClient } from '@/client/claude-client.js'
 
+// @ts-ignore - Suppress error if fastify types are not installed
 declare module 'fastify' {
   interface FastifyInstance {
     claude: ClaudeClient
   }
-
   interface FastifyRequest {
     claudeMessages?: unknown[]
   }
@@ -16,39 +22,45 @@ declare module 'fastify' {
 
 export interface FastifyClaudeOptions extends FastifyPluginOptions {
   client: ClaudeClient
-  parseMessages?: (request: unknown) => unknown[]
+  parseMessages?: (request: FastifyRequest) => unknown[]
 }
 
 const claudePlugin: FastifyPluginAsync<FastifyClaudeOptions> = async (
-  fastify,
-  options,
+  fastify: FastifyInstance,
+  options: FastifyClaudeOptions,
 ) => {
   fastify.decorate('claude', options.client)
 
   if (options.parseMessages) {
-    fastify.addHook('preHandler', async (request, reply) => {
-      try {
-        request.claudeMessages = options.parseMessages!(request)
-      } catch (_error) {
-        reply.status(400).send({ error: 'Invalid message format' })
-      }
-    })
+    fastify.addHook(
+      'preHandler',
+      async (request: FastifyRequest, reply: FastifyReply) => {
+        try {
+          request.claudeMessages = options.parseMessages!(request)
+        } catch (_error) {
+          reply.status(400).send({ error: 'Invalid message format' })
+        }
+      },
+    )
   }
 
-  fastify.setErrorHandler((error, request, reply) => {
-    if (error.name.includes('Claude')) {
-      const statusCode =
-        (error as unknown as { statusCode?: number }).statusCode ?? 500
-      return reply.status(statusCode).send({
-        error: {
-          message: error.message,
-          type: error.constructor.name,
-        },
-      })
-    }
+  fastify.setErrorHandler(
+    (error: Error, request: FastifyRequest, reply: FastifyReply) => {
+      if (error.name.includes('Claude')) {
+        const statusCode =
+          (error as unknown as { statusCode?: number }).statusCode ?? 500
+        reply.status(statusCode).send({
+          error: {
+            message: error.message,
+            type: error.constructor.name,
+          },
+        })
+        return
+      }
 
-    throw error
-  })
+      throw error
+    },
+  )
 }
 
 export default fp(claudePlugin, {

@@ -2,9 +2,13 @@ import type { Request, Response, NextFunction } from 'express'
 import type { ClaudeClient } from '@/client/claude-client.js'
 
 declare global {
-  interface Request {
-    claude?: ClaudeClient
-    claudeMessages?: unknown[]
+  // Augment Express Request interface
+  // eslint-disable-next-line @typescript-eslint/no-namespace
+  namespace Express {
+    interface Request {
+      claude?: ClaudeClient
+      claudeMessages?: unknown[]
+    }
   }
 }
 
@@ -42,13 +46,13 @@ export function claudeErrorHandler(
   if (error.name.includes('Claude')) {
     const statusCode =
       (error as unknown as { statusCode?: number }).statusCode ?? 500
-    return res.status(statusCode).json({
+    res.status(statusCode).json({
       error: {
         message: error.message,
         type: error.constructor.name,
       },
     })
+    return
   }
-
   next(error)
 }

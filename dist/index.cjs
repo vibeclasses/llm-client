@@ -25,11 +25,13 @@ __export(index_exports, {
   ClientError: () => ClientError,
   ConversationHistoryManager: () => ConversationHistoryManager,
   NetworkError: () => NetworkError,
+  OpenAIClient: () => OpenAIClient,
   RateLimitError: () => RateLimitError,
   RetryHandler: () => RetryHandler,
   ServerError: () => ServerError,
   StreamingClient: () => StreamingClient,
-  TokenManager: () => TokenManager
+  TokenManager: () => TokenManager,
+  createAIClient: () => createAIClient
 });
 module.exports = __toCommonJS(index_exports);
 
@@ -373,7 +375,7 @@ var ClaudeClient = class extends import_eventemitter3.EventEmitter {
   constructor(config) {
     super();
     const envMaxTokens = process.env.MAX_TOKENS ? parseInt(process.env.MAX_TOKENS, 10) : void 0;
-    console.log({ "Using claude-client max tokens": { envMaxTokens } });
+    console.log({ "Using llm-client max tokens": { envMaxTokens } });
     this.config = {
       baseUrl: "https://api.anthropic.com/v1",
       timeout: 3e4,
@@ -534,6 +536,45 @@ var ClaudeClient = class extends import_eventemitter3.EventEmitter {
   }
 };
 
+// src/client/openai-client.ts
+var import_config2 = require("dotenv/config");
+var import_eventemitter32 = require("eventemitter3");
+var OpenAIClient = class extends import_eventemitter32.EventEmitter {
+  constructor(config) {
+    super();
+    this.config = config;
+  }
+  async sendMessage(messages, _options = {}) {
+    throw new Error("Not implemented");
+  }
+  async sendMessageAsync(messages, _options = {}) {
+    throw new Error("Not implemented");
+  }
+  async streamMessage(messages, _options = {}) {
+    throw new Error("Not implemented");
+  }
+  async countTokens(_request) {
+    throw new Error("Not implemented");
+  }
+  getTokenUsage() {
+    return {};
+  }
+  getTokenUsageInfo() {
+    return {};
+  }
+  resetTokenUsage() {
+  }
+};
+
+// src/client/ai-client-factory.ts
+function createAIClient(config) {
+  const provider = config?.providerOverride ?? process.env.AI_PROVIDER ?? "claude";
+  if (provider === "openai") {
+    return new OpenAIClient(config);
+  }
+  return new ClaudeClient(config);
+}
+
 // src/conversation/history-manager.ts
 var ConversationHistoryManager = class {
   constructor() {
@@ -628,9 +669,11 @@ var ConversationHistoryManager = class {
   ClientError,
   ConversationHistoryManager,
   NetworkError,
+  OpenAIClient,
   RateLimitError,
   RetryHandler,
   ServerError,
   StreamingClient,
-  TokenManager
+  TokenManager,
+  createAIClient
 });

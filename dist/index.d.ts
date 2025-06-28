@@ -253,6 +253,41 @@ declare class StreamingClient {
     stream(request: ClaudeRequest, options?: StreamingOptions): AsyncIterable<string>;
 }
 
+interface AIClient extends EventEmitter {
+    sendMessage(messages: ClaudeRequest['messages'], options?: Partial<ClaudeRequest> & {
+        providerOverride?: string;
+    }): Promise<ClaudeResponse>;
+    sendMessageAsync(messages: ClaudeRequest['messages'], options?: Partial<ClaudeRequest> & {
+        providerOverride?: string;
+    }): Promise<ClaudeResponse>;
+    streamMessage(messages: ClaudeRequest['messages'], options?: Partial<ClaudeRequest & {
+        onContent?: (delta: string) => void;
+        providerOverride?: string;
+    }>): Promise<AsyncIterable<string>>;
+    countTokens(request: TokenCountRequest): Promise<TokenCountResponse>;
+    getTokenUsage(): unknown;
+    getTokenUsageInfo(): unknown;
+    resetTokenUsage(): void;
+}
+
+declare function createAIClient(config: ClaudeClientConfig & {
+    providerOverride?: string;
+}): AIClient;
+
+declare class OpenAIClient extends EventEmitter implements AIClient {
+    private config;
+    constructor(config: Record<string, unknown>);
+    sendMessage(messages: ClaudeRequest['messages'], _options?: Partial<ClaudeRequest>): Promise<ClaudeResponse>;
+    sendMessageAsync(messages: ClaudeRequest['messages'], _options?: Partial<ClaudeRequest>): Promise<ClaudeResponse>;
+    streamMessage(messages: ClaudeRequest['messages'], _options?: Partial<ClaudeRequest & {
+        onContent?: (delta: string) => void;
+    }>): Promise<AsyncIterable<string>>;
+    countTokens(_request: TokenCountRequest): Promise<TokenCountResponse>;
+    getTokenUsage(): unknown;
+    getTokenUsageInfo(): unknown;
+    resetTokenUsage(): void;
+}
+
 interface ConversationMeta {
     id: string;
     title?: string;
@@ -279,4 +314,4 @@ declare class ConversationHistoryManager {
     trimToFitContext(conversationId: string, maxTokens: number): ClaudeMessage[];
 }
 
-export { ClaudeClient, type ClaudeClientConfig, ClaudeError, type ClaudeMessage, type ClaudeRequest, type ClaudeResponse, ClientError, ConversationHistoryManager, NetworkError, RateLimitError, type RetryConfig, RetryHandler, ServerError, StreamingClient, type StreamingOptions, type TokenCountRequest, type TokenCountResponse, TokenManager };
+export { ClaudeClient, type ClaudeClientConfig, ClaudeError, type ClaudeMessage, type ClaudeRequest, type ClaudeResponse, ClientError, ConversationHistoryManager, NetworkError, OpenAIClient, RateLimitError, type RetryConfig, RetryHandler, ServerError, StreamingClient, type StreamingOptions, type TokenCountRequest, type TokenCountResponse, TokenManager, createAIClient };

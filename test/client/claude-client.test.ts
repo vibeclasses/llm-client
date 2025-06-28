@@ -1,6 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { ClaudeClient } from '../../src/client/claude-client.js'
-import { NetworkError, ClientError, RateLimitError } from '../../src/types/error-types.ts'
+import { ClaudeClient } from '@/client/claude-client.js'
 
 vi.mock('node:fetch')
 
@@ -62,7 +61,7 @@ describe('ClaudeClient', () => {
         content: [{ type: 'text', text: 'Hello!' }],
         model: 'claude-sonnet-4-20250514',
         stop_reason: 'end_turn',
-        stop_sequence: null,
+        stop_sequence: undefined,
         usage: {
           input_tokens: 10,
           output_tokens: 5,
@@ -151,7 +150,7 @@ describe('ClaudeClient', () => {
         content: [{ type: 'text', text: 'Hello!' }],
         model: 'claude-sonnet-4-20250514',
         stop_reason: 'end_turn',
-        stop_sequence: null,
+        stop_sequence: undefined,
         usage: { input_tokens: 10, output_tokens: 5 },
       })
 
@@ -293,7 +292,7 @@ describe('ClaudeClient', () => {
         content: [{ type: 'text', text: 'Hello!' }],
         model: 'claude-sonnet-4-20250514',
         stop_reason: 'end_turn',
-        stop_sequence: null,
+        stop_sequence: undefined,
         usage: { input_tokens: 10, output_tokens: 5 },
       }
 

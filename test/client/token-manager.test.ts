@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
-import { TokenManager } from '../../src/client/token-manager.ts'
+import { TokenManager } from '@/client/token-manager.js'
 
 describe('TokenManager', () => {
   let tokenManager: TokenManager
@@ -79,6 +79,7 @@ describe('TokenManager', () => {
     it('should handle missing token fields', () => {
       const responseUsage = {
         input_tokens: 100,
+        output_tokens: 0,
       }
 
       tokenManager.trackUsage(responseUsage)
