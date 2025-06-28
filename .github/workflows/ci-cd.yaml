@@ -29,7 +29,7 @@ jobs:
           cache: "npm"
 
       - name: Install dependencies
-        run: npm ci
+        run: npm install
 
       - name: Run ESLint
         run: npm run lint
@@ -51,7 +51,7 @@ jobs:
           cache: "npm"
 
       - name: Install dependencies
-        run: npm ci
+        run: npm install
 
       - name: Run TypeScript type checking
         run: npm run typecheck
@@ -73,7 +73,7 @@ jobs:
           cache: "npm"
 
       - name: Install dependencies
-        run: npm ci
+        run: npm install
 
       - name: Run tests with coverage
         run: npm run test:coverage
@@ -102,7 +102,7 @@ jobs:
           cache: "npm"
 
       - name: Install dependencies
-        run: npm ci
+        run: npm install
 
       - name: Build package
         run: npm run build
@@ -141,7 +141,7 @@ jobs:
           cache: "npm"
 
       - name: Install dependencies
-        run: npm ci
+        run: npm install
 
       - name: Run security audit
         run: npm audit --audit-level=moderate
@@ -173,7 +173,7 @@ jobs:
           git config --local user.name "Marco Antonio Gonzalez Junior"
 
       - name: Install dependencies
-        run: npm ci
+        run: npm install
 
       - name: Determine version bump type
         id: version-type
@@ -251,7 +251,7 @@ jobs:
           git config --local user.name "Marco Antonio Gonzzalez Junior"
 
       - name: Install dependencies
-        run: npm ci
+        run: npm install
 
       - name: Build package
         run: npm run build
@@ -331,7 +331,7 @@ jobs:
           cache: "npm"
 
       - name: Install dependencies
-        run: npm ci
+        run: npm install
 
       - name: Download build artifacts
         uses: actions/download-artifact@v4
