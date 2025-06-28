@@ -89,7 +89,7 @@
     "redoc-cli": "^0.13.0",
     "swagger-codegen": "^0.1.1",
     "tsup": "^8.0.0",
-    "typedoc": "^0.25.0",
+    "typedoc": "^0.28.6",
     "typescript": "^5.4.4",
     "vitest": "^2.0.0"
   },
