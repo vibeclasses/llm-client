@@ -501,42 +501,133 @@ var ClaudeClient = class extends EventEmitter {
 
 // src/client/openai-client.ts
 import "dotenv/config";
+import OpenAI from "openai";
 import { EventEmitter as EventEmitter2 } from "eventemitter3";
 var OpenAIClient = class extends EventEmitter2 {
   constructor(config) {
     super();
-    this.config = config;
+    const envMaxTokens = process.env.MAX_TOKENS ? parseInt(process.env.MAX_TOKENS, 10) : void 0;
+    this.config = {
+      baseUrl: "https://api.openai.com/v1",
+      timeout: 3e4,
+      maxRetries: 3,
+      retryDelay: 1e3,
+      maxTokens: envMaxTokens ?? 16384,
+      model: "gpt-4o",
+      temperature: 1,
+      enableLogging: false,
+      organizationId: "",
+      ...config
+    };
+    this.openai = new OpenAI({
+      apiKey: this.config.apiKey,
+      baseURL: this.config.baseUrl,
+      timeout: this.config.timeout,
+      maxRetries: this.config.maxRetries,
+      organization: this.config.organizationId
+    });
+    this.tokenManager = new TokenManager();
+  }
+  // Helper to map ClaudeMessage to OpenAI ChatCompletionMessageParam
+  mapClaudeMessagesToOpenAI(messages) {
+    return messages.map((msg) => {
+      if (msg.role === "user" || msg.role === "assistant") {
+        return {
+          role: msg.role,
+          content: typeof msg.content === "string" ? msg.content : Array.isArray(msg.content) ? msg.content.map((c) => c.text).join("\n") : ""
+        };
+      }
+      return void 0;
+    }).filter(Boolean);
   }
   async sendMessage(messages, _options = {}) {
-    return {
-      id: "mock-id",
+    if (this.tokenManager.isSessionLimitReached()) {
+      throw new Error(
+        `Session token limit of ${this.tokenManager.getMaxSessionTokens()} has been reached. Current usage: ${this.tokenManager.getTotalSessionTokens()} tokens. Reset token usage with resetTokenUsage() to continue.`
+      );
+    }
+    const response = await this.openai.chat.completions.create({
+      model: this.config.model,
+      messages: this.mapClaudeMessagesToOpenAI(messages),
+      max_tokens: this.config.maxTokens,
+      temperature: this.config.temperature
+      // Only include OpenAI-compatible options
+    });
+    let stop_reason = "end_turn";
+    switch (response.choices[0].finish_reason) {
+      case "length":
+        stop_reason = "max_tokens";
+        break;
+      case "stop":
+        stop_reason = "end_turn";
+        break;
+      case "tool_calls":
+        stop_reason = "tool_use";
+        break;
+      case "content_filter":
+        stop_reason = "stop_sequence";
+        break;
+      default:
+        stop_reason = "end_turn";
+    }
+    const claudeResponse = {
+      id: response.id,
       type: "message",
       role: "assistant",
-      model: "gpt-4",
-      content: [{ type: "text", text: "Hello from OpenAIClient!" }],
-      stop_reason: "end_turn",
-      usage: { input_tokens: 1, output_tokens: 1 }
+      content: [
+        {
+          type: "text",
+          text: response.choices[0].message.content ?? ""
+        }
+      ],
+      model: response.model,
+      stop_reason,
+      usage: {
+        input_tokens: response.usage?.prompt_tokens ?? 0,
+        output_tokens: response.usage?.completion_tokens ?? 0
+      }
     };
+    this.tokenManager.trackUsage(claudeResponse.usage);
+    this.emit("response", claudeResponse);
+    return claudeResponse;
   }
-  async sendMessageAsync(messages, _options = {}) {
-    throw new Error("Not implemented");
+  async sendMessageAsync(messages, options = {}) {
+    return this.sendMessage(messages, options);
   }
-  async streamMessage(messages, _options = {}) {
-    async function* generator() {
-      yield "This is a mock stream from OpenAIClient.";
+  async streamMessage(messages, options = {}) {
+    if (this.tokenManager.isSessionLimitReached()) {
+      throw new Error(
+        `Session token limit of ${this.tokenManager.getMaxSessionTokens()} has been reached. Current usage: ${this.tokenManager.getTotalSessionTokens()} tokens. Reset token usage with resetTokenUsage() to continue.`
+      );
     }
-    return generator();
+    const stream = await this.openai.chat.completions.create({
+      model: this.config.model,
+      messages: this.mapClaudeMessagesToOpenAI(messages),
+      max_tokens: this.config.maxTokens,
+      temperature: this.config.temperature,
+      stream: true
+    });
+    return async function* () {
+      for await (const chunk of stream) {
+        const delta = chunk.choices[0]?.delta?.content ?? "";
+        if (options.onContent) {
+          options.onContent(delta);
+        }
+        yield delta;
+      }
+    }();
   }
   async countTokens(_request) {
-    throw new Error("Not implemented");
+    throw new Error("countTokens is not implemented for OpenAIClient");
   }
   getTokenUsage() {
-    return {};
+    return this.tokenManager.getUsage();
   }
   getTokenUsageInfo() {
-    return {};
+    return this.tokenManager.getTokenUsageInfo();
   }
   resetTokenUsage() {
+    this.tokenManager.reset();
   }
 };
 

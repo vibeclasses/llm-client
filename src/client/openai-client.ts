@@ -9,7 +9,10 @@ import type {
 import { TokenManager, type TokenUsage } from './token-manager.ts'
 import type { AIClient } from '@/types/ai-client.js'
 import type { ChatCompletionMessageParam } from 'openai/resources/chat/completions/completions.js'
-import type { TokenCountRequest, TokenCountResponse } from '@/types/api-types.js'
+import type {
+  TokenCountRequest,
+  TokenCountResponse,
+} from '@/types/api-types.js'
 
 export class OpenAIClient extends EventEmitter implements AIClient {
   private readonly config: Required<OpenAIClientConfig>
@@ -48,17 +51,26 @@ export class OpenAIClient extends EventEmitter implements AIClient {
   }
 
   // Helper to map ClaudeMessage to OpenAI ChatCompletionMessageParam
-  private mapClaudeMessagesToOpenAI(messages: ClaudeRequest['messages']): ChatCompletionMessageParam[] {
+  private mapClaudeMessagesToOpenAI(
+    messages: ClaudeRequest['messages'],
+  ): ChatCompletionMessageParam[] {
     // Only map 'user' and 'assistant' roles, ignore others
-    return messages.map((msg) => {
-      if (msg.role === 'user' || msg.role === 'assistant') {
-        return {
-          role: msg.role,
-          content: typeof msg.content === 'string' ? msg.content : (Array.isArray(msg.content) ? msg.content.map(c => c.text).join('\n') : ''),
-        } as ChatCompletionMessageParam
-      }
-      return undefined
-    }).filter(Boolean) as ChatCompletionMessageParam[]
+    return messages
+      .map((msg) => {
+        if (msg.role === 'user' || msg.role === 'assistant') {
+          return {
+            role: msg.role,
+            content:
+              typeof msg.content === 'string'
+                ? msg.content
+                : Array.isArray(msg.content)
+                  ? msg.content.map((c) => c.text).join('\n')
+                  : '',
+          } as ChatCompletionMessageParam
+        }
+        return undefined
+      })
+      .filter(Boolean) as ChatCompletionMessageParam[]
   }
 
   async sendMessage(
@@ -133,7 +145,9 @@ export class OpenAIClient extends EventEmitter implements AIClient {
 
   async streamMessage(
     messages: ClaudeRequest['messages'],
-    options: Partial<ClaudeRequest & { onContent?: (delta: string) => void }> = {},
+    options: Partial<
+      ClaudeRequest & { onContent?: (delta: string) => void }
+    > = {},
   ): Promise<AsyncIterable<string>> {
     if (this.tokenManager.isSessionLimitReached()) {
       throw new Error(
@@ -153,17 +167,17 @@ export class OpenAIClient extends EventEmitter implements AIClient {
     } as unknown as import('openai/resources/chat/completions/completions.js').ChatCompletionCreateParamsStreaming)
 
     // OpenAI streaming returns an AsyncIterable if stream: true
-    return (
-      async function* () {
-        for await (const chunk of stream as AsyncIterable<import('openai/resources/chat/completions/completions.js').ChatCompletionChunk>) {
-          const delta = chunk.choices[0]?.delta?.content ?? ''
-          if (options.onContent) {
-            options.onContent(delta)
-          }
-          yield delta
+    return (async function* () {
+      for await (const chunk of stream as AsyncIterable<
+        import('openai/resources/chat/completions/completions.js').ChatCompletionChunk
+      >) {
+        const delta = chunk.choices[0]?.delta?.content ?? ''
+        if (options.onContent) {
+          options.onContent(delta)
         }
+        yield delta
       }
-    )()
+    })()
   }
 
   async countTokens(_request: TokenCountRequest): Promise<TokenCountResponse> {

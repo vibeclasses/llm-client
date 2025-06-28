@@ -16,6 +16,7 @@ export interface ClaudeClientConfig {
     | 'gpt-4-turbo'
     | 'gpt-4o'
     | 'gpt-4-32k'
+    | 'GPT-4.1' // allow GPT-4.1 as a valid model
     | string // allow future models
   temperature?: number
   enableLogging?: boolean
@@ -38,6 +39,7 @@ export interface OpenAIClientConfig {
     | 'gpt-4-turbo'
     | 'gpt-4o'
     | 'gpt-4-32k'
+    | 'GPT-4.1' // allow GPT-4.1 as a valid model
     | string // allow future models
   temperature?: number
   enableLogging?: boolean
