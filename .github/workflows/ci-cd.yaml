@@ -169,6 +169,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/setup
+        with:
+          token: ${{ secrets.NPM_TOKEN }}
       - name: Download build artifacts
         uses: actions/download-artifact@v4
         with:
@@ -189,6 +191,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/setup
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
       - name: Download build artifacts
         uses: actions/download-artifact@v4
         with:
