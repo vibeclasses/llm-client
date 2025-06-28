@@ -27,7 +27,9 @@ export function createAIClient(
   },
 ): AIClient {
   const envProvider = process.env.AI_PROVIDER
-  const isValidProvider = supportedProviders.includes(envProvider as SupportedProvider)
+  const isValidProvider = supportedProviders.includes(
+    envProvider as SupportedProvider,
+  )
   const provider =
     config?.providerOverride ??
     (isValidProvider ? (envProvider as SupportedProvider) : undefined) ??

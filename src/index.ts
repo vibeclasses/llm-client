@@ -10,7 +10,10 @@ export {
   supportedProviders,
   supportedModels,
 } from './client/ai-client-factory.js'
-export { OpenAIClient, supportedModels as supportedOpenAIModels } from './client/openai-client.js'
+export {
+  OpenAIClient,
+  supportedModels as supportedOpenAIModels,
+} from './client/openai-client.js'
 
 // Type exports
 export * from './types/api-types.js'
