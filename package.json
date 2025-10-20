@@ -70,7 +70,7 @@
     "dotenv": "^17.0.0",
     "eventemitter3": "^5.0.0",
     "from": "^0.1.7",
-    "openai": "^5.8.2"
+    "openai": "^6.5.0"
   },
   "devDependencies": {
     "@types/express": "^5.0.2",
